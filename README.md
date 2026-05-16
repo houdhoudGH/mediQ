@@ -20,7 +20,7 @@ from a <strong>locally-running Llama 2 model</strong>, no OpenAI API needed.
 
 <!-- STEP 1: record a GIF with ScreenToGif showing: salam → answer → heart attack question → thank you -->
 <!-- upload it to docs/images/demo.gif -->
-<img src="clideo_editor_7dd2f64f305b411baba3b35c727b471e-ezgif.com-crop.gif" width="60%" alt="MediQ Demo"/>
+<img src="clideo_editor_7dd2f64f305b411baba3b35c727b471e-ezgif.com-crop.gif" width="50%" alt="MediQ Demo"/>
 
 </div>
 
