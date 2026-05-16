@@ -1,37 +1,25 @@
+# app.py
 import os
-
-from src.prompt import *
-from src.helper import *
-
-from flask import Flask, render_template, jsonify, request
-
-from langchain.llms import CTransformers
-from pinecone import Pinecone, ServerlessSpec
-from langchain_pinecone import PineconeVectorStore
-from langchain import PromptTemplate
-from langchain.chains import RetrievalQA
-
+from flask import Flask, render_template, request
 from dotenv import load_dotenv
 
+from src.prompt import prompt_template
+from src.helper import download_hugging_face_embeddings
+
+from langchain_community.llms import CTransformers
+from langchain_core.prompts import PromptTemplate
+from langchain_classic.chains import RetrievalQA
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
+
 app = Flask(__name__)
-
 load_dotenv()
-
-API_KEY = os.getenv("PINECONE_API_KEY")
 
 embeddings = download_hugging_face_embeddings()
 
+API_KEY = os.getenv("PINECONE_API_KEY")
 pc = Pinecone(api_key=API_KEY)
-
 index_name = "medical-chatbot-llama2"
-
-if index_name not in pc.list_indexes().names():
-    pc.create_index(
-        name=index_name,
-        dimension=384,
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-    )
 
 vector_store = PineconeVectorStore(
     index=pc.Index(index_name),
@@ -42,18 +30,22 @@ PROMPT = PromptTemplate(
     template=prompt_template, input_variables=["context", "question"]
 )
 
-chain_type_kwargs = {"prompt": PROMPT}
-
 llm = CTransformers(
     model="./model/llama-2-7b-chat.ggmlv3.q2_K.bin",
     model_type="llama",
-    config={"max_new_tokens": 1024, "temperature": 0.8},
+    config={
+        "max_new_tokens": 100,
+        "temperature": 0.5,
+        "gpu_layers": 0,
+        "context_length": 1024,
+    },
 )
 
 qa = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
-    retriever=vector_store.as_retriever(search_kwargs={"k": 4}),
+    retriever=vector_store.as_retriever(search_kwargs={"k": 1}),
+    chain_type_kwargs={"prompt": PROMPT},
     return_source_documents=False,
 )
 
@@ -63,14 +55,51 @@ def index():
     return render_template("chat.html")
 
 
-@app.route("/get", methods=["GET", "POST"])
+@app.route("/get", methods=["POST"])
 def chat():
-    msg = request.form["msg"]
-    input = msg
-    print(input)
-    result = qa({"query": input})
-    print("Response : ", result["result"])
-    return str(result["result"])
+    user_question = request.form["msg"].strip()
+    q_lower = user_question.lower().strip()
+
+    # Exact greetings only
+    if q_lower in [
+        "salam",
+        "hello",
+        "hi",
+        "hey",
+        "bonjour",
+        "ahlan",
+        "السلام عليكم",
+        "hola",
+    ]:
+        if "salam" in q_lower:
+            return "Wa alaykoum salam! 😊 I'm MediQ, your medical assistant. How can I help you today?"
+        return "Hello! 😊 I'm MediQ, your medical assistant. How can I help you today?"
+
+    # Exact thanks only
+    if q_lower in [
+        "thank you",
+        "thanks",
+        "shukran",
+        "شكرا",
+        "merci",
+        "thank you so much",
+        "thx",
+        "ty",
+    ]:
+        return "My pleasure! 💙 Stay healthy and feel free to ask me anything anytime."
+
+    # Exact goodbyes only
+    if q_lower in ["bye", "goodbye", "see you", "مع السلامة", "bslama", "ciao"]:
+        return "Take care and stay healthy! 💙 Goodbye!"
+
+    # Medical question — send to LLM
+    result = qa.invoke({"query": user_question})
+    answer = str(result["result"]).strip()
+
+    if not answer:
+        return "I'm not sure, please consult a doctor. 🏥"
+
+    return answer
 
 
 if __name__ == "__main__":
