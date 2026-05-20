@@ -18,7 +18,7 @@ From medical PDF to grounded answer — full pipeline ingestion → embedding �
 local LLM inference → web delivery, with <strong>zero cloud LLM costs and zero hallucinations</strong>.
 </p>
 
-<img src="docs/images/demo.gif" width="60%" alt="MediQ Demo"/>
+<img src="clideo_editor_7dd2f64f305b411baba3b35c727b471e-ezgif.com-crop.gif" width="60%" alt="MediQ Demo"/>
 
 </div>
 
@@ -118,8 +118,8 @@ result = qa.invoke({"query": user_question})
 The chatbot handles three distinct conversation modes — multilingual greetings, grounded medical Q&A, and graceful refusal — all from a single endpoint.
 
 <div align="center">
-  <img src="docs/images/chat1.png" width="48%" alt="Multilingual greeting"/>
-  <img src="docs/images/chat2.png" width="48%" alt="Medical answer"/>
+  <img src="image.png" width="48%" alt="Multilingual greeting"/>
+  <img src="image2.png" width="48%" alt="Medical answer"/>
 </div>
 
 <br/>
@@ -206,8 +206,6 @@ mediq/
 │   └── chat.html              # Chat web interface
 ├── static/
 │   └── style.css              # Custom dark theme
-├── docs/
-│   └── images/                # Screenshots and GIF for this README
 ├── model/
 │   └── llama-2-7b-chat.ggmlv3.q2_K.bin  # Local model (git-ignored)
 ├── data/                      # Medical PDFs (git-ignored)
