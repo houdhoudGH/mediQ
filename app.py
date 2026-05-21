@@ -1,5 +1,11 @@
 # app.py
 import os
+import certifi
+
+# Auto-fix SSL cert path so we don't need to set it manually before running
+os.environ["SSL_CERT_FILE"] = certifi.where()
+os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
 
@@ -34,17 +40,17 @@ llm = CTransformers(
     model="./model/llama-2-7b-chat.ggmlv3.q2_K.bin",
     model_type="llama",
     config={
-        "max_new_tokens": 100,
-        "temperature": 0.5,
+        "max_new_tokens": 256,  # was 100 — too short for nuanced safety answers
+        "temperature": 0.4,  # was 0.5 — slightly more focused, less rambling
         "gpu_layers": 0,
-        "context_length": 1024,
+        "context_length": 2048,  # was 1024 — needed for k=3 + longer prompt
     },
 )
 
 qa = RetrievalQA.from_chain_type(
     llm=llm,
     chain_type="stuff",
-    retriever=vector_store.as_retriever(search_kwargs={"k": 1}),
+    retriever=vector_store.as_retriever(search_kwargs={"k": 3}),  # was 1
     chain_type_kwargs={"prompt": PROMPT},
     return_source_documents=False,
 )
@@ -72,8 +78,10 @@ def chat():
         "hola",
     ]:
         if "salam" in q_lower:
-            return "Wa alaykoum salam! 😊 I'm MediQ, your medical assistant. How can I help you today?"
-        return "Hello! 😊 I'm MediQ, your medical assistant. How can I help you today?"
+            return "**Wa alaykoum salam!** 😊 I'm MediQ, your medical assistant. How can I help you today?"
+        return (
+            "**Hello!** 😊 I'm MediQ, your medical assistant. How can I help you today?"
+        )
 
     # Exact thanks only
     if q_lower in [

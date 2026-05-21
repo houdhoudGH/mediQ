@@ -2,7 +2,7 @@
 
 <h1>🏥 MediQ — Medical Chatbot</h1>
 
-<p><strong>A production-ready medical Q&A chatbot powered by Llama 2, Pinecone, and LangChain — with a custom Flask web interface</strong></p>
+<p><strong>A production-ready medical Q&A chatbot with a deterministic safety layer<br/>powered by Llama 2, Pinecone, LangChain, and a custom Flask web interface</strong></p>
 
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-Web_App-000000?style=flat-square&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
@@ -15,26 +15,90 @@
 
 <p>
 Ask any medical question in any language — get grounded, source-backed answers<br/>
-from a <strong>locally-running Llama 2 model</strong>, no OpenAI API needed.
+from a <strong>locally-running Llama 2 model</strong>, with a rule-based safety net<br/>
+that catches dangerous inputs <em>before</em> they reach the model.
 </p>
-
-<!-- STEP 1: record a GIF with ScreenToGif showing: salam → answer → heart attack question → thank you -->
-<!-- upload it to docs/images/demo.gif -->
-<img src="clideo_editor_7dd2f64f305b411baba3b35c727b471e-ezgif.com-crop.gif" width="50%" alt="MediQ Demo"/>
 
 </div>
 
 ---
 
-## 🌟 What Makes This Project Different
+## 💬 See it in action
 
-Most RAG chatbots are just notebooks. This one is a **deployed full-stack application**:
+<div align="center">
 
-- 🌐 **Real web interface** — custom dark-theme chat UI, no Streamlit or Gradio
-- 🧠 **Runs 100% locally** — Llama 2 7B on your machine, zero cloud LLM costs
-- 🔒 **Faithful RAG** — answers only from retrieved medical context, never hallucinating
-- 💬 **Multilingual greetings** — responds to salam, hello, bonjour, السلام عليكم
+<table>
+<tr>
+<td width="50%">
+<img src="image.png" alt="MediQ welcome screen with starter prompts"/>
+<p align="center"><em>Clean welcome screen with starter prompts</em></p>
+</td>
+<td width="50%">
+<img src="image copy 3.png" alt="Diabetes symptoms answer"/>
+<p align="center"><em>Grounded answers from the medical knowledge base</em></p>
+</td>
+</tr>
+<tr>
+<td width="50%">
+<img src="image copy.png" alt="Heart attack explanation with typing indicator"/>
+<p align="center"><em>Markdown rendering + typing indicator during inference</em></p>
+</td>
+<td width="50%">
+<img src="image copy 2.png" alt="Safety layer pushing back on 10L water"/>
+<p align="center"><em><strong>Safety layer:</strong> pushes back on dangerous quantities</em></p>
+</td>
+</tr>
+</table>
+
+</div>
+
+---
+
+## 🌟 What makes this project different
+
+Most RAG chatbots are notebooks. MediQ is a **deployed full-stack application** with engineering choices a real medical product would make:
+
+- 🛡️ **Deterministic safety layer** — high-risk inputs (overdose-level medication quantities, prolonged fasting, emergency symptoms, stopping prescription drugs) are caught by **rule-based handlers before reaching the LLM**, ensuring consistent, instant, locally-relevant warnings (e.g. Algerian emergency numbers 14 / 1548)
+- 🌐 **Real web interface** — custom clinical white-and-blue chat UI built from scratch, no Streamlit or Gradio
+- 🧠 **Runs 100% locally** — Llama 2 7B on CPU, zero cloud LLM costs, no OpenAI API
+- 🔒 **Grounded RAG** — answers anchored in 9,826 medical chunks indexed in Pinecone
+- 💬 **Multilingual** — handles English, French, and Arabic / Darija greetings
+- 📝 **Markdown rendering** — bot answers support bold, lists, and inline code
 - 📦 **Proper Python package** — `src/` module with clean separation of concerns
+
+---
+
+## 🛡️ The safety layer — why it matters
+
+Pure RAG chatbots have a known failure mode: they give bland, agreeable answers to dangerous inputs. Ask a small quantized Llama 2 *"should I drink 10 liters of water a day?"* and it will politely list general hydration advice — completely missing that 10L can cause life-threatening **hyponatremia**.
+
+MediQ solves this with a **two-tier architecture**:
+
+```
+                  ┌──────────────────────────┐
+   User input ──▶ │ Tier 1: Safety patterns  │ ──▶  match? ──▶ instant response
+                  │ (regex, rule-based)      │
+                  └──────────────────────────┘
+                              │ no match
+                              ▼
+                  ┌──────────────────────────┐
+                  │ Tier 2: RAG + LLM        │ ──▶  grounded answer
+                  │ (Pinecone + Llama 2)     │
+                  └──────────────────────────┘
+```
+
+**What the safety layer catches:**
+
+| Pattern | Example trigger | Why it matters |
+|---|---|---|
+| Excessive water | *"how much water? 10L?"* | Hyponatremia — sodium imbalance, seizures |
+| Paracetamol overdose | *"can I take 20 paracetamol?"* | Liver failure — silent at first |
+| Ibuprofen overdose | *"6 advil for my back pain"* | GI bleeding, kidney damage |
+| Prolonged fasting | *"fasting for 7 days"* | Muscle wasting, cardiac arrhythmia |
+| Stopping prescription meds | *"I want to stop my metformin"* | Diabetic complications, resistant infections |
+| Emergency symptoms | *"chest pain radiating to arm"* | Time-critical — Algerian SAMU (14) shown |
+
+This pattern (deterministic safety rules in front of an LLM) is what real medical AI products use. It's faster than LLM inference, more reliable than prompt engineering, and easy to audit.
 
 ---
 
@@ -51,52 +115,39 @@ Most RAG chatbots are just notebooks. This one is a **deployed full-stack applic
      │   Pinecone Vector DB   │  sentence-transformers/all-MiniLM-L6-v2
      │   (384-dim, cosine)    │  9,826 chunks indexed
      └────────────┬───────────┘
-                  │  top-1 most relevant chunk retrieved
+                  │
+                  │  User question arrives
                   ▼
      ┌────────────────────────┐
-     │   LangChain RetrievalQA│  context injected into prompt
+     │   Safety layer (regex) │  catches dangerous inputs instantly
+     │   ─ overdose quantities│  no LLM inference needed
+     │   ─ emergency symptoms │
+     │   ─ stopping meds      │
+     └────────────┬───────────┘
+                  │  passed through if safe
+                  ▼
+     ┌────────────────────────┐
+     │   LangChain RetrievalQA│  top-3 chunks retrieved
      └────────────┬───────────┘
                   │
                   ▼
      ┌────────────────────────┐
      │   Llama 2 7B (local)   │  CTransformers GGML quantized
-     │   CPU inference        │  temperature: 0.5
+     │   CPU inference        │  temp 0.4, 256 max tokens
      └────────────┬───────────┘
                   │
                   ▼
      ┌────────────────────────┐
      │    Flask Web App       │  served at localhost:8080
-     │    POST /get           │  AJAX — no page reload
+     │    POST /get           │  AJAX, markdown rendered
      └────────────────────────┘
 ```
 
 ---
 
-## 💬 Demo
+## 🔬 Project breakdown
 
-<!-- STEP 2: upload 2-3 screenshots to docs/images/ showing the chat in action -->
-
-<div align="center">
-  <img src="image.png" width="48%" alt="Greeting in Arabic"/>
-  <img src="image2.png" width="48%" alt="Medical Answer"/>
-</div>
-
-<br/>
-
-| User says | MediQ responds |
-|---|---|
-| *"salam"* | "Wa alaykoum salam! 😊 I'm MediQ, how can I help you today?" |
-| *"what causes a heart attack?"* | Concise, grounded answer from medical knowledge base |
-| *"thank you so much"* | "My pleasure! 💙 Stay healthy and feel free to ask anytime." |
-| *"what is X?"* (not in KB) | "I'm not sure, please consult a doctor. 🏥" |
-
-> **Faithful by design:** greetings and small talk are handled directly without touching the LLM. Medical questions go through RAG — if the knowledge base doesn't have the answer, MediQ says so honestly instead of hallucinating.
-
----
-
-## 🔬 Project Breakdown
-
-### Data Ingestion (`store_index.py`)
+### Data ingestion (`store_index.py`)
 
 Run once to build the vector index:
 
@@ -105,9 +156,7 @@ Run once to build the vector index:
 3. Embed with `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions)
 4. Store in **Pinecone Serverless** (AWS `us-east-1`, cosine similarity)
 
-### Source Module (`src/`)
-
-Clean, reusable Python package:
+### Source module (`src/`)
 
 ```
 src/
@@ -117,46 +166,49 @@ src/
 ```
 
 **`helper.py`** — three focused utilities:
+
 ```python
 load_pdf(data)                     # Load all PDFs from a directory
 text_split(extracted_data)         # Chunk documents (300 tokens, 20 overlap)
 download_hugging_face_embeddings() # Load all-MiniLM-L6-v2
 ```
 
-**`prompt.py`** — strict, concise RAG prompt:
-```
-You are MediQ, a concise and friendly medical assistant.
-Answer in 2-3 sentences maximum using ONLY the context.
-If not found → "I'm not sure, please consult a doctor."
-```
+**`prompt.py`** — instructs the LLM to use retrieved context as the main source, allows general medical knowledge when context is thin, and reserves "consult a doctor" for genuinely personal questions (specific dosage, lab results, diagnosis) instead of using it as a catch-all refusal.
 
-### Smart Conversation Routing (`app.py`)
+### Request flow (`app.py`)
 
-Greetings, thanks, and goodbyes are caught **before** reaching the LLM — instant responses, no wasted inference:
+Three tiers, each one cheaper than the last:
 
 ```python
-if q_lower in ["salam", "hello", "hi", ...]:
-    return "Wa alaykoum salam! 😊 ..."  # instant
+# Tier 0: exact-match greetings, thanks, goodbyes — instant
+if q_lower in ["salam", "hello", ...]:
+    return "Wa alaykoum salam! 😊 ..."
 
-if q_lower in ["thank you", "shukran", ...]:
-    return "My pleasure! 💙 ..."         # instant
+# Tier 1: safety patterns (regex) — instant, deterministic
+safety_response = check_safety_patterns(q_lower)
+if safety_response:
+    return safety_response
 
-# Only medical questions reach the LLM
+# Tier 2: medical question → RAG + LLM
 result = qa.invoke({"query": user_question})
 ```
 
 ### Chat UI (`templates/chat.html` + `static/style.css`)
 
-Built from scratch — no template used:
-- Dark gradient background (custom CSS)
-- Bubble-style messages (blue for bot, green for user)
-- Real-time AJAX — no page reload on send
-- Timestamps on every message
-- Fully responsive with Bootstrap 4
+Built from scratch — no Bootstrap, no template:
+
+- Clean clinical theme (white card, soft blue accents)
+- Asymmetric bubble corners (sharper "tail" corner makes user vs. bot instantly readable)
+- **Typing indicator** with animated dots while the LLM thinks
+- **Markdown rendering** for bot answers via `marked.js`
+- **Starter prompts** on first load — hide after the first user message
+- **"New chat"** button to reset the conversation
+- Smooth fade-in animations, custom scrollbar, focus ring on input
+- Fully responsive — on mobile it goes full-screen and starters stack to one column
 
 ---
 
-## 📁 Project Structure
+## 📁 Project structure
 
 ```
 mediq/
@@ -167,13 +219,13 @@ mediq/
 ├── templates/
 │   └── chat.html              # Chat web interface
 ├── static/
-│   └── style.css              # Custom dark theme
+│   └── style.css              # Custom clinical theme
 ├── docs/
-│   └── images/                # Screenshots and GIF for this README
+│   └── images/                # Screenshots for this README
 ├── model/
 │   └── llama-2-7b-chat.ggmlv3.q2_K.bin  # Local model (git-ignored)
 ├── data/                      # Medical PDFs (git-ignored)
-├── app.py                     # Flask app + conversation routing
+├── app.py                     # Flask app + safety layer + routing
 ├── store_index.py             # One-time vector index builder
 ├── setup.py
 ├── requirements.txt
@@ -182,7 +234,7 @@ mediq/
 
 ---
 
-## ⚙️ Tech Stack
+## ⚙️ Tech stack
 
 | Layer | Technology |
 |---|---|
@@ -190,13 +242,14 @@ mediq/
 | **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` (384-dim) |
 | **Vector Database** | Pinecone Serverless (AWS us-east-1, cosine similarity) |
 | **RAG Framework** | LangChain `RetrievalQA` + `PromptTemplate` |
-| **Web Framework** | Flask |
-| **Frontend** | HTML, CSS, Bootstrap 4, jQuery AJAX |
+| **Safety Layer** | Pure Python regex — deterministic, auditable, zero latency |
+| **Web Framework** | Flask + AJAX |
+| **Frontend** | Vanilla JS, custom CSS, FontAwesome 6, `marked.js` |
 | **PDF Processing** | `PyPDFLoader`, `RecursiveCharacterTextSplitter` |
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting started
 
 ### 1. Clone the repo
 ```bash
@@ -220,6 +273,8 @@ PINECONE_API_KEY=your-pinecone-api-key
 ### 4. Download the Llama 2 model
 Download `llama-2-7b-chat.ggmlv3.q2_K.bin` from [HuggingFace](https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML) and place it in `model/`.
 
+> 💡 **Tip:** For noticeably better answers, use `llama-2-7b-chat.ggmlv3.q4_K_M.bin` instead (~4GB instead of ~2.8GB) and update the path in `app.py`.
+
 ### 5. Add your medical PDFs
 Place PDF files in the `data/` folder.
 
@@ -230,23 +285,23 @@ python store_index.py
 
 ### 7. Run the app
 ```bash
-# Set SSL cert first (Windows)
-$env:SSL_CERT_FILE="path\to\.venv\lib\site-packages\certifi\cacert.pem"
-
 python app.py
 ```
 
-Open `http://localhost:8080` 🚀
+> SSL certificates are now handled automatically via `certifi` — no manual environment variable needed.
+
+Open [http://localhost:8080](http://localhost:8080) 🚀
 
 ---
 
-## 🔮 Future Work
+## 🔮 Future work
 
 - [ ] Streaming responses for real-time token output
 - [ ] Source citation — show which PDF page the answer came from
 - [ ] Deploy to cloud (Render, Railway, or HuggingFace Spaces)
-- [ ] Upgrade to Llama 3 for better answer quality
+- [ ] Upgrade to Llama 3 or Mistral 7B for better answer quality
 - [ ] Add conversation memory for multi-turn dialogue
+- [ ] Expand safety layer with more clinical patterns (pediatric dosing, pregnancy interactions)
 - [ ] Support voice input
 
 ---
