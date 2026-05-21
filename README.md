@@ -305,19 +305,21 @@ Open [http://localhost:8080](http://localhost:8080) 🚀
 - [ ] Support voice input
 
 ---
-
+ 
 ## 📄 License
-
+ 
 MIT — see [LICENSE](LICENSE) for details.
-
+ 
 ---
-
+ 
 <div align="center">
-
-**Built by [Houda](https://github.com/houdhoudGH)**
-*· Master 2 Data Science & NLP · AI Engineer ·*
-
+### Made with 💜 by **Gheffari Nour El Houda**
+ 
+*Master 2 Data Science & NLP · AI Engineer*
+ 
+[![GitHub](https://img.shields.io/badge/GitHub-houdhoudGH-181717?style=flat-square&logo=github)](https://github.com/houdhoudGH)
+ 
 <br/>
 <sub>Llama 2 · LangChain · Pinecone · Flask · sentence-transformers · CTransformers</sub>
-
+ 
 </div>
