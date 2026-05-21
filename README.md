@@ -313,6 +313,7 @@ MIT — see [LICENSE](LICENSE) for details.
 ---
  
 <div align="center">
+  
 ### Made with 💜 by **Gheffari Nour El Houda**
  
 *Master 2 Data Science & NLP · AI Engineer*
@@ -323,3 +324,4 @@ MIT — see [LICENSE](LICENSE) for details.
 <sub>Llama 2 · LangChain · Pinecone · Flask · sentence-transformers · CTransformers</sub>
  
 </div>
+ 
